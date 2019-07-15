@@ -70,7 +70,7 @@ public class TestDHoffkinRun {
     public void compTestsDHoffkin() throws IOException, GRBException, IllegalArgumentException {
         boolean append = false;
         boolean verbose = false;
-        // String[] airports = {"ATL", "ORD", "DFW", "LGA", "SFO", "DCA"};
+        String[] airports = {"ATL", "ORD", "DFW", "LGA", "SFO", "DCA"};
         //Duration[] maxLengths = { Duration.ofHours(4),Duration.ofHours(5),Duration.ofHours(6)};
         //String[] airports = { "ATL", "ORD", "DFW", "LGA", "SFO", "DCA"};
         Duration[] maxLengths = {Duration.ofHours(2), Duration.ofHours(3), Duration.ofHours(4), Duration.ofHours(5), Duration.ofHours(6)};
