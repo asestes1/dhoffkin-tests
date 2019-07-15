@@ -1,4 +1,4 @@
-package main.java.ips;
+package ips;
 
 import gurobi.GRB;
 import gurobi.GRBEnv;

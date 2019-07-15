@@ -1,4 +1,4 @@
-package main.java.ips;
+package ips;
 
 import java.time.Duration;
 import java.time.OffsetDateTime;
@@ -10,9 +10,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import main.java.util.BTSParser;
-import main.java.util.BTSParser.FlightStruct;
-import main.java.util.DiscretizerUtil;
+import util.BTSParser;
+import util.BTSParser.FlightStruct;
+import util.DiscretizerUtil;
 
 public final class DHoffkinFlightParser {
 	private DHoffkinFlightParser() {

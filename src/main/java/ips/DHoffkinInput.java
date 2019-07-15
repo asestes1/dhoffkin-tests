@@ -1,7 +1,7 @@
-package main.java.ips;
+package ips;
 
-import main.java.ips.ExtendedHofkinModel.Input;
-import main.java.scenarios.DiscreteScenarioTree;
+import ips.ExtendedHofkinModel.Input;
+import scenarios.DiscreteScenarioTree;
 
 public class DHoffkinInput implements Input {
 	private final int numTimePeriods;

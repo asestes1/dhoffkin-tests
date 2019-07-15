@@ -1,6 +1,6 @@
-package main.java.ips;
+package ips;
 
-import main.java.scenarios.DiscreteScenarioTree;
+import scenarios.DiscreteScenarioTree;
 
 public class MHInput implements MHDynModel.Input {
 	private final int numTimePeriods;

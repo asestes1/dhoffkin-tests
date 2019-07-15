@@ -1,9 +1,9 @@
-package test.java.testscenario;
+package testscenario;
 
 import org.junit.Test;
 
-import main.java.scenarios.DiscreteScenarioTree;
-import main.java.scenarios.ScenarioTreeFactory;
+import scenarios.ScenarioTreeFactory;
+import scenarios.DiscreteScenarioTree;
 
 public class TestScenarioTreeFactory {
 

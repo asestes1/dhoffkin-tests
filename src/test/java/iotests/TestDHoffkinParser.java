@@ -1,14 +1,14 @@
-package test.java.iotests;
+package iotests;
 
-import main.java.ips.DHoffkinFlightParser;
+import ips.DHoffkinFlightParser;
 
 import java.io.IOException;
 import java.time.Duration;
 
 import org.junit.Test;
 
-import main.java.util.BTSParser;
-import test.java.testutil.TestBTSParser;
+import util.BTSParser;
+import testutil.TestBTSParser;
 
 public class TestDHoffkinParser {
 	

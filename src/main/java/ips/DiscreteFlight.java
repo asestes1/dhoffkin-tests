@@ -1,4 +1,4 @@
-package main.java.ips;
+package ips;
 
 public class DiscreteFlight {
 	private final int flightId;

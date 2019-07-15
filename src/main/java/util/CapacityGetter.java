@@ -1,4 +1,4 @@
-package main.java.util;
+package util;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -51,7 +51,7 @@ public final class CapacityGetter {
 	
 	private static InputStream findCapacityFile() {
 		ClassLoader thisLoader = CapacityGetter.class.getClassLoader();
-		return thisLoader.getResourceAsStream("util/est_capacities.csv");
+		return thisLoader.getResourceAsStream("est_capacities.csv");
 	}
 
 	public static Integer getVfrOrIfr(String airport, boolean isVfr) throws IOException{

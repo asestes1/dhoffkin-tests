@@ -1,4 +1,4 @@
-package test.java.testutil;
+package testutil;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -7,7 +7,7 @@ import java.time.ZoneOffset;
 import org.junit.Assert;
 import org.junit.Test;
 
-import main.java.util.DiscretizerUtil;
+import util.DiscretizerUtil;
 
 public class TestDiscretizerUtil {
 	

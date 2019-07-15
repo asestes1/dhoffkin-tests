@@ -1,4 +1,4 @@
-package test.java.testutil;
+package testutil;
 
 import java.io.IOException;
 import java.time.ZoneId;
@@ -6,8 +6,8 @@ import java.time.ZoneId;
 import org.junit.Assert;
 import org.junit.Test;
 
-import main.java.util.CapacityGetter;
-import main.java.util.TimeZoneGetter;
+import util.CapacityGetter;
+import util.TimeZoneGetter;
 
 public class TestTimeZoneGetter {
 	

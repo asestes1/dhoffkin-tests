@@ -1,4 +1,4 @@
-package main.java.util;
+package util;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -47,7 +47,7 @@ public final class TimeZoneGetter {
 	
 	private static InputStream findTimeZoneFile() {
 		ClassLoader thisLoader = TimeZoneGetter.class.getClassLoader();
-		return thisLoader.getResourceAsStream("util/IATA TZ Map.txt");
+		return thisLoader.getResourceAsStream("IATA TZ Map.txt");
 	}
 
 	public static ZoneId getTimeZone(String airport) throws IOException{

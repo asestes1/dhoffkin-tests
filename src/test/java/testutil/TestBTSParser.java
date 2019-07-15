@@ -1,4 +1,4 @@
-package test.java.testutil;
+package testutil;
 
 import java.io.File;
 import java.io.IOException;
@@ -8,20 +8,19 @@ import java.time.ZoneOffset;
 
 import org.junit.Test;
 
-import main.java.util.BTSParser;
-import main.java.util.BTSParser.ResultStruct;
+import util.BTSParser;
+import util.BTSParser.ResultStruct;
 
 public class TestBTSParser {
-	public static final File btsDir = new File("/export/scratch/Datasets/BTS Ontime");
-	
+
 	@Test
 	public void testParseBTS() throws IOException{
-		parseSimpleDataset();
 		System.out.println(parseSimpleDataset());
 	}
 	
 	public static ResultStruct parseSimpleDataset() throws IOException{
-		File btsFile = BTSParser.getBTSFileFromDirectory(btsDir, 2017, 7);
+		File btsFile = new File(TestBTSParser.class.getClassLoader().getResource("OnTime_2017_07_15.csv").getFile());
+		System.out.println(btsFile.toString());
 		OffsetDateTime startTime = LocalDateTime.of(2017, 7, 15, 12, 0).atOffset(ZoneOffset.UTC);
 		OffsetDateTime endTime = LocalDateTime.of(2017, 7, 15, 15, 0).atOffset(ZoneOffset.UTC);
 		return BTSParser.separateForGDPPlanning(BTSParser.filterByAirportAndTimeRange(btsFile, startTime , endTime,  "EWR"),startTime,endTime);

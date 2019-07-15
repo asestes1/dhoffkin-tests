@@ -1,4 +1,4 @@
-package main.java.scenarios;
+package scenarios;
 
 import java.util.ArrayList;
 import java.util.HashSet;
