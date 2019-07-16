@@ -53,7 +53,7 @@ public class TestDHoffkinRun {
         DiscreteScenarioTree tree = ScenarioTreeFactory.makeLoToHigh(demand.getNumTimePeriods(), 0, 48, 3, 33, 12,
                 false, 0);
 
-        DHoffkinInput myInput = new DHoffkinInput(maxAir, 1.0, 2.0, demand, tree);
+        DHoffkinInput myInput = new DHoffkinInput(maxAir, 1.0, 2.0, 24, demand, tree);
 
         System.out.println("Building and Solving DH Model");
         ExtendedHofkinModel.solveModel(myInput, new GRBEnv(), true);
@@ -62,7 +62,7 @@ public class TestDHoffkinRun {
         MHFlightParser.DemandStruct demand2 = MHFlightParser.wrapBTSOutput(btsResults, disc);
 
         System.out.println("Building and Solving MH model");
-        MHInput myInput2 = new MHInput(maxAir, 1.0, 2.0, demand2, tree);
+        MHInput myInput2 = new MHInput(maxAir, 1.0, 2.0, 24.0, demand2, tree);
         MHDynModel.solveModel(myInput2, new GRBEnv(), true);
     }
 
@@ -78,7 +78,8 @@ public class TestDHoffkinRun {
                 Duration.ofMinutes(15)};
 
         Duration padding = Duration.ofHours(3);
-        LocalDateTime[] localStartTimes = {LocalDateTime.of(2017, 7, 15, 7, 0), LocalDateTime.of(2017, 7, 15, 17, 0)};
+        LocalDateTime[] localStartTimes = {LocalDateTime.of(2017, 7, 15, 7, 0),
+                LocalDateTime.of(2017, 7, 15, 17, 0)};
         Integer[] param_cases = {1, 2, 3, 4, 5, 6};
         double groundCost = 1.0;
         double airCost = 3.0;
@@ -122,6 +123,7 @@ public class TestDHoffkinRun {
                     int numAir = separatedFlights.getAirborneFlights().size();
                     for (Duration disc : discs) {
                         int numTimePeriodsInHour = (int) (Duration.ofHours(1).toNanos() / disc.toNanos());
+                        double divertCost = numTimePeriodsInHour * airCost;
                         int numTimePeriods = (int) (Duration.between(start, end).toNanos() / disc.toNanos());
                         int earliestChange = 2 * numTimePeriodsInHour;
                         int latestChange = (int) (Duration.between(start, start.plus(maxLength)).toNanos()
@@ -150,7 +152,8 @@ public class TestDHoffkinRun {
                             DiscreteScenarioTree myTree = ScenarioTreeFactory.makeLoToHigh(numTimePeriods,
                                     earliestChange, latestChange, ifr, vfr, numTimePeriodsInHour, probAlt, lookahead);
 
-                            MHDynModel.Input myMHInput = new MHInput(wmax, groundCost, airCost, myMHDemands, myTree);
+                            MHDynModel.Input myMHInput = new MHInput(wmax, groundCost, airCost, divertCost,
+                                    myMHDemands, myTree);
                             GRBModel mhModel = MHDynModel.solveModel(myMHInput, myEnv, verbose);
                             double solveTimeMH = mhModel.get(GRB.DoubleAttr.Runtime);
                             int statusMH = mhModel.get(GRB.IntAttr.Status);
@@ -161,7 +164,7 @@ public class TestDHoffkinRun {
                             double mhNodes = mhModel.get(GRB.DoubleAttr.NodeCount);
                             mhModel.dispose();
 
-                            DHoffkinInput myDHInput = new DHoffkinInput(wmax, groundCost, airCost, myDHDemands, myTree);
+                            DHoffkinInput myDHInput = new DHoffkinInput(wmax, groundCost, airCost, airCost * numTimePeriodsInHour, myDHDemands, myTree);
                             GRBModel dhModel = ExtendedHofkinModel.solveModel(myDHInput, myEnv, verbose);
                             double solveTimeDH = dhModel.get(GRB.DoubleAttr.Runtime);
                             int statusDH = dhModel.get(GRB.IntAttr.Status);

@@ -8,17 +8,19 @@ public class DHoffkinInput implements Input {
 	private final int maxAirborne;
 	private final double groundCost;
 	private final double airCost;
+	private final double divertCost;
 	private final DHoffkinFlightParser.DemandStruct demands;
 	private final DiscreteScenarioTree tree;
 
 	public DHoffkinInput(int maxAirborne,
-			double groundCost, double airCost, DHoffkinFlightParser.DemandStruct demands,
+			double groundCost, double airCost, double divertCost, DHoffkinFlightParser.DemandStruct demands,
 			DiscreteScenarioTree tree) {
 		super();
 		this.numTimePeriods = demands.getNumTimePeriods();
 		this.maxAirborne = maxAirborne;
 		this.groundCost = groundCost;
 		this.airCost = airCost;
+		this.divertCost = divertCost;
 		this.demands = demands;
 		this.tree = tree;
 	}
@@ -36,6 +38,11 @@ public class DHoffkinInput implements Input {
 	@Override
 	public double getAirCost() {
 		return airCost;
+	}
+
+	@Override
+	public double getDivertCost() {
+		return divertCost;
 	}
 
 	@Override

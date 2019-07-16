@@ -7,6 +7,7 @@ import gurobi.GRBLinExpr;
 import gurobi.GRBModel;
 import gurobi.GRBVar;
 
+import java.lang.reflect.Method;
 import java.util.Iterator;
 
 public class MHDynModel {
@@ -18,6 +19,8 @@ public class MHDynModel {
         double getGroundCost();
 
         double getAirCost();
+
+        double getDivertCost();
 
         int getMaxAirborne();
 
@@ -61,6 +64,8 @@ public class MHDynModel {
     private static void addVars(GRBModel myModel, Input input) throws GRBException {
         addDepartVars(myModel, input);
         addAirVars(myModel, input);
+        addDivertVars(myModel, input);
+        addLandVars(myModel, input);
     }
 
     private static String getDepartVarName(int flightId, int timeIndex, int scenario) {
@@ -72,7 +77,7 @@ public class MHDynModel {
         double groundCost = input.getGroundCost();
         for (DiscreteFlight f : input.getFlights()) {
             int depIndex = f.getDepartTimePeriod();
-            for (int j = depIndex; j < numTimePeriods; j++) {
+            for (int j = depIndex; j < numTimePeriods + 1 - f.getFlightDuration(); j++) {
                 for (int s : input.getScenarios()) {
                     double probability = input.getScenProbability(s);
                     model.addVar(0.0, 1.0, groundCost * (j - depIndex) * probability,
@@ -81,6 +86,7 @@ public class MHDynModel {
             }
         }
     }
+
 
     private static void addAirVars(GRBModel model, Input myInput)
             throws GRBException {
@@ -100,12 +106,41 @@ public class MHDynModel {
                 }
             }
         }
+    }
 
+    private static void addLandVars(GRBModel model, Input myInput) throws GRBException {
+        int numTimePeriods = myInput.getNumTimePeriods();
+        for (int s : myInput.getScenarios()) {
+            for (int i = 0; i < numTimePeriods; i++) {
+                model.addVar(0.0, myInput.getCapacity(s, i), 0.0,
+                        GRB.INTEGER, getLandVarName(s, i));
+            }
+        }
+    }
+
+    private static void addDivertVars(GRBModel model, Input myInput) throws GRBException {
+        double divertCost = myInput.getDivertCost();
+        int numTimePeriods = myInput.getNumTimePeriods();
+        for (int s : myInput.getScenarios()) {
+            double probability = myInput.getScenProbability(s);
+            for (int i = 0; i < numTimePeriods; i++) {
+                model.addVar(0.0, GRB.INFINITY, divertCost * probability,
+                        GRB.INTEGER, getDivertVarName(s, i));
+            }
+        }
     }
 
 
     public static String getAirVarName(int scenario, int timePeriod) {
         return "AIR: " + scenario + "," + timePeriod;
+    }
+
+    public static String getLandVarName(int scenario, int timePeriod) {
+        return "LAND: " + scenario + "," + timePeriod;
+    }
+
+    public static String getDivertVarName(int scenario, int timePeriod) {
+        return "DIVERT: " + scenario + "," + timePeriod;
     }
 
     public static String getDepartAAConstrName(int scenario1, int scenario2, int flightId, int t) {
@@ -132,7 +167,7 @@ public class MHDynModel {
         int numTimePeriods = input.getNumTimePeriods();
         for (DiscreteFlight f : input.getFlights()) {
             int flightId = f.getFlightId();
-            for (int i = f.getDepartTimePeriod(); i < numTimePeriods; i++) {
+            for (int i = f.getDepartTimePeriod(); i < numTimePeriods + 1 - f.getFlightDuration(); i++) {
                 for (Iterable<Integer> nodes : input.getNodes(i)) {
                     Iterator<Integer> scenIter = nodes.iterator();
                     int firstScen = scenIter.next();
@@ -152,11 +187,10 @@ public class MHDynModel {
         for (int s : input.getScenarios()) {
             for (DiscreteFlight f : input.getFlights()) {
                 GRBLinExpr times = new GRBLinExpr();
-                for (int t = f.getDepartTimePeriod(); t < numTimePeriods; t++) {
+                for (int t = f.getDepartTimePeriod(); t < numTimePeriods + 1 - f.getFlightDuration(); t++) {
                     times.addTerm(1.0, model.getVarByName(getDepartVarName(f.getFlightId(), t, s)));
                 }
-                model.addConstr(times, GRB.EQUAL, 1.0,
-                        getDepartureConstrName(f.getFlightId(), s));
+                model.addConstr(times, GRB.EQUAL, 1.0, getDepartureConstrName(f.getFlightId(), s));
             }
         }
     }
@@ -177,8 +211,10 @@ public class MHDynModel {
                     inFlow.addTerm(1.0, model.getVarByName(getAirVarName(s, t - 1)));
                 }
                 GRBLinExpr outFlow = new GRBLinExpr();
-                outFlow.addConstant(input.getCapacity(s, t));
                 outFlow.addTerm(1.0, model.getVarByName(getAirVarName(s, t)));
+                outFlow.addTerm(1.0, model.getVarByName(getDivertVarName(s, t)));
+                outFlow.addTerm(1.0, model.getVarByName(getLandVarName(s, t)));
+
                 model.addConstr(inFlow, GRB.LESS_EQUAL, outFlow, getArrivalNodeConstrName(s, t));
             }
         }
