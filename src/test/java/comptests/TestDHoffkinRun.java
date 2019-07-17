@@ -90,7 +90,9 @@ public class TestDHoffkinRun {
         BufferedWriter writer = new BufferedWriter(fw);
         if (!append) {
             writer.write(
-                    "APT,VFR,IFR,WMAX,START,END,MAXLENGTH,NUM_SITTING,NUM_AIR,DISC,CASE,AIRCOST,LOOKAHEAD,NUM_TIME_PERIODS,EARLY_CHANGE,LATE_CHANGE,PROB_ALT,MH_SOLVETIME,DH_SOLVETIME,FEASIBLE,OBJ,MH_NODES,DH_NODES\n");
+                    "APT,VFR,IFR,WMAX,START,END,MAXLENGTH,NUM_SITTING,NUM_AIR,DISC,CASE,AIRCOST," +
+                            "LOOKAHEAD,NUM_TIME_PERIODS,EARLY_CHANGE,LATE_CHANGE,PROB_ALT,MH_SOLVETIME," +
+                            "DH_SOLVETIME,FEASIBLE,OBJ,MH_NODES,DH_NODES, MH_DIVERT, DH_DIVERT, DIVERTCOST\n");
         }
 
 
@@ -123,7 +125,7 @@ public class TestDHoffkinRun {
                     int numAir = separatedFlights.getAirborneFlights().size();
                     for (Duration disc : discs) {
                         int numTimePeriodsInHour = (int) (Duration.ofHours(1).toNanos() / disc.toNanos());
-                        double divertCost = numTimePeriodsInHour * airCost;
+                        double divertCost = 2 * numTimePeriodsInHour * airCost;
                         int numTimePeriods = (int) (Duration.between(start, end).toNanos() / disc.toNanos());
                         int earliestChange = 2 * numTimePeriodsInHour;
                         int latestChange = (int) (Duration.between(start, start.plus(maxLength)).toNanos()
@@ -162,9 +164,10 @@ public class TestDHoffkinRun {
                                 objectiveMH = mhModel.get(GRB.DoubleAttr.ObjVal);
                             }
                             double mhNodes = mhModel.get(GRB.DoubleAttr.NodeCount);
+                            double mhDivert = MHDynModel.getAverageDiversions(myMHInput, mhModel);
                             mhModel.dispose();
 
-                            DHoffkinInput myDHInput = new DHoffkinInput(wmax, groundCost, airCost, airCost * numTimePeriodsInHour, myDHDemands, myTree);
+                            DHoffkinInput myDHInput = new DHoffkinInput(wmax, groundCost, airCost, divertCost, myDHDemands, myTree);
                             GRBModel dhModel = ExtendedHofkinModel.solveModel(myDHInput, myEnv, verbose);
                             double solveTimeDH = dhModel.get(GRB.DoubleAttr.Runtime);
                             int statusDH = dhModel.get(GRB.IntAttr.Status);
@@ -174,6 +177,7 @@ public class TestDHoffkinRun {
                                 objective = dhModel.get(GRB.DoubleAttr.ObjVal);
                             }
                             double dhNodes = dhModel.get(GRB.DoubleAttr.NodeCount);
+                            double dhDivert = ExtendedHofkinModel.getAverageDiversions(myDHInput, dhModel);
                             dhModel.dispose();
 
                             if (statusMH == GRB.Status.OPTIMAL && statusDH == GRB.Status.OPTIMAL) {
@@ -207,8 +211,8 @@ public class TestDHoffkinRun {
                                     + maxLength.toHours() + "," + numSitting + "," + numAir + "," + disc.toMinutes()
                                     + "," + param_case + "," + airCost + "," + lookahead + "," + numTimePeriods + ","
                                     + earliestChange + "," + latestChange + "," + probAlt + "," + solveTimeMH + ","
-                                    + solveTimeDH + "," + feasible + "," + objective + "," + mhNodes + "," + dhNodes
-                                    + "\n");
+                                    + solveTimeDH + "," + feasible + "," + objective + "," + mhNodes + "," + dhNodes +
+                                    "," + mhDivert + "," + dhDivert + "," + divertCost + "\n");
 
                             // Reset parameters
                             wmax = vfr - ifr;

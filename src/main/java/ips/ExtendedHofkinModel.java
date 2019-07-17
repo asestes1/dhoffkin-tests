@@ -44,6 +44,16 @@ public final class ExtendedHofkinModel {
 
     }
 
+    public static double getAverageDiversions(Input input, GRBModel model) throws GRBException{
+        double sum = 0.0;
+        for(int i=0; i < input.getNumTimePeriods(); i++){
+            for(int s: input.getScenarios()) {
+                sum += model.getVarByName(getDivertVarName(s, i)).get(GRB.DoubleAttr.X);
+            }
+        }
+        return sum;
+    }
+
     public static GRBModel solveModel(Input myInput) throws GRBException {
         return solveModel(myInput, new GRBEnv(), false);
     }
@@ -247,7 +257,7 @@ public final class ExtendedHofkinModel {
                 outFlow.addTerm(1.0, model.getVarByName(getAirVarName(j, i)));
                 outFlow.addTerm(1.0, model.getVarByName(getLandVarName(j, i)));
                 outFlow.addTerm(1.0, model.getVarByName(getDivertVarName(j, i)));
-                model.addConstr(inFlow, GRB.LESS_EQUAL, outFlow, getArrivalNodeConstrName(j, i));
+                model.addConstr(inFlow, GRB.EQUAL, outFlow, getArrivalNodeConstrName(j, i));
             }
         }
     }
