@@ -48,7 +48,7 @@ public final class ExtendedHofkinModel {
         double sum = 0.0;
         for(int i=0; i < input.getNumTimePeriods(); i++){
             for(int s: input.getScenarios()) {
-                sum += model.getVarByName(getDivertVarName(s, i)).get(GRB.DoubleAttr.X);
+                sum += model.getVarByName(getDivertVarName(s, i)).get(GRB.DoubleAttr.X) * input.getScenProbability(s);
             }
         }
         return sum;

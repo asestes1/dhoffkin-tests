@@ -68,15 +68,15 @@ public class TestDHoffkinRun {
 
     @Test
     public void compTestsDHoffkin() throws IOException, GRBException, IllegalArgumentException {
-        boolean append = false;
+        boolean append = true;
         boolean verbose = false;
-        String[] airports = {"ATL", "ORD", "DFW", "LGA", "SFO", "DCA"};
+        //String[] airports = {"ATL"};
         //Duration[] maxLengths = { Duration.ofHours(4),Duration.ofHours(5),Duration.ofHours(6)};
-        //String[] airports = { "ATL", "ORD", "DFW", "LGA", "SFO", "DCA"};
+        String[] airports = {"ATL", "ORD", "DFW", "LGA", "SFO", "DCA"};
         Duration[] maxLengths = {Duration.ofHours(2), Duration.ofHours(3), Duration.ofHours(4), Duration.ofHours(5), Duration.ofHours(6)};
         Duration[] discs = {Duration.ofMinutes(2), Duration.ofMinutes(5), Duration.ofMinutes(10),
                 Duration.ofMinutes(15)};
-
+        //Duration[] discs = {Duration.ofMinutes(10), Duration.ofMinutes(15)};
         Duration padding = Duration.ofHours(3);
         LocalDateTime[] localStartTimes = {LocalDateTime.of(2017, 7, 15, 7, 0),
                 LocalDateTime.of(2017, 7, 15, 17, 0)};
@@ -125,7 +125,6 @@ public class TestDHoffkinRun {
                     int numAir = separatedFlights.getAirborneFlights().size();
                     for (Duration disc : discs) {
                         int numTimePeriodsInHour = (int) (Duration.ofHours(1).toNanos() / disc.toNanos());
-                        double divertCost = 2 * numTimePeriodsInHour * airCost;
                         int numTimePeriods = (int) (Duration.between(start, end).toNanos() / disc.toNanos());
                         int earliestChange = 2 * numTimePeriodsInHour;
                         int latestChange = (int) (Duration.between(start, start.plus(maxLength)).toNanos()
@@ -148,6 +147,7 @@ public class TestDHoffkinRun {
                             } else if (param_case == 6) {
                                 lookahead = numTimePeriodsInHour / 2;
                             }
+                            double divertCost = 1 * numTimePeriodsInHour * airCost;
 
                             // Run experiment
 

@@ -38,15 +38,16 @@ public class MHDynModel {
 
     }
 
-    public static double getAverageDiversions(Input input, GRBModel model) throws GRBException{
+    public static double getAverageDiversions(Input input, GRBModel model) throws GRBException {
         double sum = 0.0;
-        for(int i=0; i < input.getNumTimePeriods(); i++){
-            for(int s: input.getScenarios()) {
-                sum += model.getVarByName(getDivertVarName(s, i)).get(GRB.DoubleAttr.X);
+        for (int i = 0; i < input.getNumTimePeriods(); i++) {
+            for (int s : input.getScenarios()) {
+                sum += model.getVarByName(getDivertVarName(s, i)).get(GRB.DoubleAttr.X) * input.getScenProbability(s);
             }
         }
         return sum;
     }
+
     public static GRBModel solveModel(Input input, GRBEnv myEnv, boolean verbose) throws GRBException {
         GRBModel myModel = setupModel(input, myEnv, verbose);
         myModel.optimize();
