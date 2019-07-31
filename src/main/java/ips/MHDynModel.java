@@ -7,7 +7,6 @@ import gurobi.GRBLinExpr;
 import gurobi.GRBModel;
 import gurobi.GRBVar;
 
-import java.lang.reflect.Method;
 import java.util.Iterator;
 
 public class MHDynModel {
@@ -48,35 +47,60 @@ public class MHDynModel {
         return sum;
     }
 
-    public static GRBModel solveModel(Input input, GRBEnv myEnv, boolean verbose) throws GRBException {
-        GRBModel myModel = setupModel(input, myEnv, verbose);
+
+    public static GRBModel solveMhModel(Input input, GRBEnv myEnv, boolean verbose) throws GRBException {
+        GRBModel myModel = setupMhModel(input, myEnv, verbose);
         myModel.optimize();
         return myModel;
     }
 
-    public static GRBModel solveModel(Input input) throws GRBException {
-        return solveModel(input, new GRBEnv(), false);
-    }
-
-    private static GRBModel setupModel(Input input, GRBEnv myEnv, boolean verbose) throws GRBException {
+    private static GRBModel setupMhModel(Input input, GRBEnv myEnv, boolean verbose) throws GRBException {
         GRBModel myModel = new GRBModel(myEnv);
         if (!verbose) {
             myModel.set(GRB.IntParam.OutputFlag, 0);
         }
-        addVars(myModel, input);
+        addMhVars(myModel, input);
         myModel.update();
-        addConstraints(myModel, input);
+        addMhConstraints(myModel, input);
+        myModel.update();
+        return myModel;
+    }
+
+    public static GRBModel solveMhdModel(Input input, GRBEnv myEnv, boolean verbose) throws GRBException {
+        GRBModel myModel = setupMhdModel(input, myEnv, verbose);
+        myModel.optimize();
+        return myModel;
+    }
+
+    public static GRBModel solveMhdModel(Input input) throws GRBException {
+        return solveMhdModel(input, new GRBEnv(), false);
+    }
+
+    private static GRBModel setupMhdModel(Input input, GRBEnv myEnv, boolean verbose) throws GRBException {
+        GRBModel myModel = new GRBModel(myEnv);
+        if (!verbose) {
+            myModel.set(GRB.IntParam.OutputFlag, 0);
+        }
+        addMhdVars(myModel, input);
+        myModel.update();
+        addMhdConstraints(myModel, input);
         myModel.update();
         return myModel;
     }
 
 
-    private static void addVars(GRBModel myModel, Input input) throws GRBException {
+    private static void addMhdVars(GRBModel myModel, Input input) throws GRBException {
         addDepartVars(myModel, input);
         addAirVars(myModel, input);
         addDivertVars(myModel, input);
         addLandVars(myModel, input);
     }
+
+    private static void addMhVars(GRBModel myModel, Input input) throws GRBException {
+        addDepartVars(myModel, input);
+        addAirVars(myModel, input);
+    }
+
 
     private static String getDepartVarName(int flightId, int timeIndex, int scenario) {
         return "DEP; FID: " + flightId + ", Time: " + timeIndex + ", Scen: " + scenario;
@@ -165,9 +189,15 @@ public class MHDynModel {
         return "ARR_NODE: " + scenario + "," + timePeriod;
     }
 
-    private static void addConstraints(GRBModel model, Input input) throws GRBException {
+    private static void addMhdConstraints(GRBModel model, Input input) throws GRBException {
         addDepartureConstraints(model, input);
-        addArrivalNodeConstraints(model, input);
+        addArrivalMhdNodeConstraints(model, input);
+        addAntiAnticipatoryConstraints(model, input);
+    }
+
+    private static void addMhConstraints(GRBModel model, Input input) throws GRBException {
+        addDepartureConstraints(model, input);
+        addArrivalMhNodeConstraints(model, input);
         addAntiAnticipatoryConstraints(model, input);
     }
 
@@ -205,7 +235,7 @@ public class MHDynModel {
         }
     }
 
-    private static void addArrivalNodeConstraints(GRBModel model, Input input) throws GRBException {
+    private static void addArrivalMhdNodeConstraints(GRBModel model, Input input) throws GRBException {
         int numTimePeriods = input.getNumTimePeriods();
         for (int s : input.getScenarios()) {
             for (int t = 0; t < numTimePeriods; t++) {
@@ -226,6 +256,30 @@ public class MHDynModel {
                 outFlow.addTerm(1.0, model.getVarByName(getLandVarName(s, t)));
 
                 model.addConstr(inFlow, GRB.EQUAL, outFlow, getArrivalNodeConstrName(s, t));
+            }
+        }
+    }
+
+    private static void addArrivalMhNodeConstraints(GRBModel model, Input input) throws GRBException {
+        int numTimePeriods = input.getNumTimePeriods();
+        for (int s : input.getScenarios()) {
+            for (int t = 0; t < numTimePeriods; t++) {
+                GRBLinExpr inFlow = new GRBLinExpr();
+                inFlow.addConstant(input.getEnroute(t));
+                for (DiscreteFlight f : input.getFlights()) {
+                    int dur = f.getFlightDuration();
+                    if (t - dur >= f.getDepartTimePeriod()) {
+                        inFlow.addTerm(1.0, model.getVarByName(getDepartVarName(f.getFlightId(), t - dur, s)));
+                    }
+                }
+                if (t > 0) {
+                    inFlow.addTerm(1.0, model.getVarByName(getAirVarName(s, t - 1)));
+                }
+                GRBLinExpr outFlow = new GRBLinExpr();
+                outFlow.addConstant(input.getCapacity(s, t));
+                outFlow.addTerm(1.0, model.getVarByName(getAirVarName(s, t)));
+
+                model.addConstr(inFlow, GRB.LESS_EQUAL, outFlow, getArrivalNodeConstrName(s, t));
             }
         }
     }

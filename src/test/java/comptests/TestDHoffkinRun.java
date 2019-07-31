@@ -63,24 +63,29 @@ public class TestDHoffkinRun {
 
         System.out.println("Building and Solving MH model");
         MHInput myInput2 = new MHInput(maxAir, 1.0, 2.0, 24.0, demand2, tree);
-        MHDynModel.solveModel(myInput2, new GRBEnv(), true);
+        MHDynModel.solveMhdModel(myInput2, new GRBEnv(), true);
     }
 
     @Test
     public void compTestsDHoffkin() throws IOException, GRBException, IllegalArgumentException {
-        boolean append = true;
+        boolean append = false;
         boolean verbose = false;
-        //String[] airports = {"ATL"};
-        //Duration[] maxLengths = { Duration.ofHours(4),Duration.ofHours(5),Duration.ofHours(6)};
-        String[] airports = {"ATL", "ORD", "DFW", "LGA", "SFO", "DCA"};
-        Duration[] maxLengths = {Duration.ofHours(2), Duration.ofHours(3), Duration.ofHours(4), Duration.ofHours(5), Duration.ofHours(6)};
-        Duration[] discs = {Duration.ofMinutes(2), Duration.ofMinutes(5), Duration.ofMinutes(10),
-                Duration.ofMinutes(15)};
-        //Duration[] discs = {Duration.ofMinutes(10), Duration.ofMinutes(15)};
+
+        String[] airports = {"ORD"};
+        Duration[] maxLengths = {Duration.ofHours(6)};
+        Duration[] discs = {Duration.ofMinutes(2)};
+        Integer[] param_cases = {4};
+        Double[] divertFactors = {1.0};
+        //String[] airports = {"ATL", "ORD", "DFW", "LGA", "SFO", "DCA"};
+        //Duration[] maxLengths = {Duration.ofHours(2), Duration.ofHours(3), Duration.ofHours(4), Duration.ofHours(5), Duration.ofHours(6)};
+        //Duration[] discs = {Duration.ofMinutes(2), Duration.ofMinutes(5), Duration.ofMinutes(10), Duration.ofMinutes(15)};
+        //Integer[] param_cases = {1, 2, 3, 4, 5, 6};
+
+        //Double[] divertFactors = {1.0, 2.0, 1000.0};
         Duration padding = Duration.ofHours(3);
         LocalDateTime[] localStartTimes = {LocalDateTime.of(2017, 7, 15, 7, 0),
                 LocalDateTime.of(2017, 7, 15, 17, 0)};
-        Integer[] param_cases = {1, 2, 3, 4, 5, 6};
+
         double groundCost = 1.0;
         double airCost = 3.0;
         int lookahead = 0;
@@ -91,8 +96,9 @@ public class TestDHoffkinRun {
         if (!append) {
             writer.write(
                     "APT,VFR,IFR,WMAX,START,END,MAXLENGTH,NUM_SITTING,NUM_AIR,DISC,CASE,AIRCOST," +
-                            "LOOKAHEAD,NUM_TIME_PERIODS,EARLY_CHANGE,LATE_CHANGE,PROB_ALT,MH_SOLVETIME," +
-                            "DH_SOLVETIME,FEASIBLE,OBJ,MH_NODES,DH_NODES, MH_DIVERT, DH_DIVERT, DIVERTCOST\n");
+                            "LOOKAHEAD,NUM_TIME_PERIODS,EARLY_CHANGE,LATE_CHANGE,PROB_ALT,DIVERT_FACTOR," +
+                            " MH_SOLVETIME,MHD_SOLVETIME,DHD_SOLVETIME,MH_FEASIBLE,OBJ_MH,"+
+                            "OBJ_DIVERT,MH_NODES, MHD_NODES, DHD_NODES,MHD_DIVERT,DHD_DIVERT\n");
         }
 
 
@@ -135,7 +141,6 @@ public class TestDHoffkinRun {
                                 .wrapBTSOutput(separatedFlights, disc);
 
                         for (int param_case : param_cases) {
-                            System.out.println(counter++);
                             if (param_case == 2) {
                                 wmax = ExtendedHofkinModel.UNLIMITED;
                             } else if (param_case == 3) {
@@ -147,79 +152,92 @@ public class TestDHoffkinRun {
                             } else if (param_case == 6) {
                                 lookahead = numTimePeriodsInHour / 2;
                             }
-                            double divertCost = 1 * numTimePeriodsInHour * airCost;
+                            for (double divertFactor : divertFactors) {
+                                System.out.println(counter++);
+                                double divertCost = divertFactor * numTimePeriodsInHour * airCost;
 
-                            // Run experiment
+                                // Run experiment
 
-                            DiscreteScenarioTree myTree = ScenarioTreeFactory.makeLoToHigh(numTimePeriods,
-                                    earliestChange, latestChange, ifr, vfr, numTimePeriodsInHour, probAlt, lookahead);
+                                DiscreteScenarioTree myTree = ScenarioTreeFactory.makeLoToHigh(numTimePeriods,
+                                        earliestChange, latestChange, ifr, vfr, numTimePeriodsInHour, probAlt, lookahead);
 
-                            MHDynModel.Input myMHInput = new MHInput(wmax, groundCost, airCost, divertCost,
-                                    myMHDemands, myTree);
-                            GRBModel mhModel = MHDynModel.solveModel(myMHInput, myEnv, verbose);
-                            double solveTimeMH = mhModel.get(GRB.DoubleAttr.Runtime);
-                            int statusMH = mhModel.get(GRB.IntAttr.Status);
-                            double objectiveMH = Double.NaN;
-                            if (statusMH == GRB.Status.OPTIMAL) {
-                                objectiveMH = mhModel.get(GRB.DoubleAttr.ObjVal);
-                            }
-                            double mhNodes = mhModel.get(GRB.DoubleAttr.NodeCount);
-                            double mhDivert = MHDynModel.getAverageDiversions(myMHInput, mhModel);
-                            mhModel.dispose();
+                                MHDynModel.Input myMHInput = new MHInput(wmax, groundCost, airCost, divertCost,
+                                        myMHDemands, myTree);
+                                GRBModel mhModel = MHDynModel.solveMhModel(myMHInput, myEnv, verbose);
+                                double solveTimeMH = mhModel.get(GRB.DoubleAttr.Runtime);
+                                int statusMH = mhModel.get(GRB.IntAttr.Status);
+                                double objectiveMH = Double.NaN;
+                                boolean feasible = true;
+                                if (statusMH == GRB.Status.OPTIMAL) {
+                                    objectiveMH = mhModel.get(GRB.DoubleAttr.ObjVal);
+                                } else {
+                                    feasible = false;
+                                }
+                                double mhNodes = mhModel.get(GRB.DoubleAttr.NodeCount);
+                                mhModel.dispose();
 
-                            DHoffkinInput myDHInput = new DHoffkinInput(wmax, groundCost, airCost, divertCost, myDHDemands, myTree);
-                            GRBModel dhModel = ExtendedHofkinModel.solveModel(myDHInput, myEnv, verbose);
-                            double solveTimeDH = dhModel.get(GRB.DoubleAttr.Runtime);
-                            int statusDH = dhModel.get(GRB.IntAttr.Status);
-                            boolean feasible = true;
-                            double objective = Double.NaN;
-                            if (statusDH == GRB.Status.OPTIMAL) {
-                                objective = dhModel.get(GRB.DoubleAttr.ObjVal);
-                            }
-                            double dhNodes = dhModel.get(GRB.DoubleAttr.NodeCount);
-                            double dhDivert = ExtendedHofkinModel.getAverageDiversions(myDHInput, dhModel);
-                            dhModel.dispose();
+                                GRBModel mhdModel = MHDynModel.solveMhdModel(myMHInput, myEnv, verbose);
+                                double solveTimeMHD = mhdModel.get(GRB.DoubleAttr.Runtime);
+                                int statusMHD = mhdModel.get(GRB.IntAttr.Status);
+                                double objectiveMHD = Double.NaN;
+                                if (statusMHD == GRB.Status.OPTIMAL) {
+                                    objectiveMHD = mhdModel.get(GRB.DoubleAttr.ObjVal);
+                                }
+                                double mhdNodes = mhdModel.get(GRB.DoubleAttr.NodeCount);
+                                double mhdDivert = MHDynModel.getAverageDiversions(myMHInput, mhdModel);
+                                mhdModel.dispose();
 
-                            if (statusMH == GRB.Status.OPTIMAL && statusDH == GRB.Status.OPTIMAL) {
-                                if (objective > 0.5) {
-                                    double percent_diff = Math.abs(objective - objectiveMH) / objective;
-                                    if (percent_diff > 0.001) {
-                                        writer.close();
-                                        throw new GRBException("Methods produce different objective values. MH Obj: "
-                                                + objectiveMH + ". DH Obj: " + objective + ". Percent difference: "
-                                                + percent_diff);
+                                DHoffkinInput myDHInput = new DHoffkinInput(wmax, groundCost, airCost, divertCost, myDHDemands, myTree);
+                                GRBModel dhModel = ExtendedHofkinModel.solveModel(myDHInput, myEnv, verbose);
+                                double solveTimeDH = dhModel.get(GRB.DoubleAttr.Runtime);
+                                int statusDH = dhModel.get(GRB.IntAttr.Status);
+                                double objectiveDH = Double.NaN;
+                                if (statusDH == GRB.Status.OPTIMAL) {
+                                    objectiveDH = dhModel.get(GRB.DoubleAttr.ObjVal);
+                                }
+                                double dhNodes = dhModel.get(GRB.DoubleAttr.NodeCount);
+                                double dhDivert = ExtendedHofkinModel.getAverageDiversions(myDHInput, dhModel);
+                                dhModel.dispose();
+
+                                if (statusMHD == GRB.Status.OPTIMAL && statusDH == GRB.Status.OPTIMAL) {
+                                    if (objectiveDH > 0.5) {
+                                        double percent_diff = Math.abs(objectiveDH - objectiveMHD) / objectiveDH;
+                                        if (percent_diff > 0.001) {
+                                            writer.close();
+                                            throw new GRBException("Methods produce different objective values. MHD Obj: "
+                                                    + objectiveMHD + ". DHD Obj: " + objectiveDH + ". Percent difference: "
+                                                    + percent_diff);
+                                        }
+                                    } else {
+                                        double abs_diff = Math.abs(objectiveDH - objectiveMHD);
+                                        if (abs_diff > 0.001) {
+                                            writer.close();
+                                            throw new GRBException("Methods produce different objective values. MH Obj: "
+                                                    + objectiveMH + ". DH Obj: " + objectiveDH + ". Absolute difference: "
+                                                    + abs_diff);
+                                        }
                                     }
                                 } else {
-                                    double abs_diff = Math.abs(objective - objectiveMH);
-                                    if (abs_diff > 0.001) {
-                                        writer.close();
-                                        throw new GRBException("Methods produce different objective values. MH Obj: "
-                                                + objectiveMH + ". DH Obj: " + objective + ". Absolute difference: "
-                                                + abs_diff);
-                                    }
+                                    writer.close();
+                                    throw new IllegalArgumentException("Invalid value in model statuses. Status of MHD: "
+                                            + statusMH + ", status of DHD: " + statusDH + ".");
                                 }
 
-                            } else if (statusMH == GRB.Status.INFEASIBLE && statusDH == GRB.Status.INFEASIBLE) {
-                                feasible = false;
-                            } else {
-                                writer.close();
-                                throw new IllegalArgumentException("Invalid value in model statuses. Status of MH: "
-                                        + statusMH + ", status of DH: " + statusDH + ".");
+                                writer.write(airport + "," + vfr + "," + ifr + "," + wmax + "," + start + "," + end + ","
+                                        + maxLength.toHours() + "," + numSitting + "," + numAir + "," + disc.toMinutes()
+                                        + "," + param_case + "," + airCost + "," + lookahead + "," + numTimePeriods + ","
+                                        + earliestChange + "," + latestChange + "," + probAlt + "," + divertFactor + ","
+                                        + solveTimeMH + ","
+                                        + solveTimeMHD + "," + solveTimeDH + "," + feasible + ","
+                                        + objectiveMH + "," + objectiveDH + "," + mhNodes+","+mhdNodes + "," + dhNodes +
+                                        "," + mhdDivert + "," + dhDivert + "," + "\n");
+
+                                // Reset parameters
+                                wmax = vfr - ifr;
+                                airCost = 3.0;
+                                lookahead = 0;
+                                probAlt = false;
                             }
-
-                            writer.write(airport + "," + vfr + "," + ifr + "," + wmax + "," + start + "," + end + ","
-                                    + maxLength.toHours() + "," + numSitting + "," + numAir + "," + disc.toMinutes()
-                                    + "," + param_case + "," + airCost + "," + lookahead + "," + numTimePeriods + ","
-                                    + earliestChange + "," + latestChange + "," + probAlt + "," + solveTimeMH + ","
-                                    + solveTimeDH + "," + feasible + "," + objective + "," + mhNodes + "," + dhNodes +
-                                    "," + mhDivert + "," + dhDivert + "," + divertCost + "\n");
-
-                            // Reset parameters
-                            wmax = vfr - ifr;
-                            airCost = 3.0;
-                            lookahead = 0;
-                            probAlt = false;
-
                         }
                     }
                 }
