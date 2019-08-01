@@ -68,20 +68,21 @@ public class TestDHoffkinRun {
 
     @Test
     public void compTestsDHoffkin() throws IOException, GRBException, IllegalArgumentException {
-        boolean append = false;
+        boolean append = true;
         boolean verbose = false;
 
-        String[] airports = {"ORD"};
-        Duration[] maxLengths = {Duration.ofHours(6)};
-        Duration[] discs = {Duration.ofMinutes(2)};
-        Integer[] param_cases = {4};
-        Double[] divertFactors = {1.0};
-        //String[] airports = {"ATL", "ORD", "DFW", "LGA", "SFO", "DCA"};
-        //Duration[] maxLengths = {Duration.ofHours(2), Duration.ofHours(3), Duration.ofHours(4), Duration.ofHours(5), Duration.ofHours(6)};
-        //Duration[] discs = {Duration.ofMinutes(2), Duration.ofMinutes(5), Duration.ofMinutes(10), Duration.ofMinutes(15)};
-        //Integer[] param_cases = {1, 2, 3, 4, 5, 6};
+//        String[] airports = {"ORD"};
+//        Duration[] maxLengths = {Duration.ofHours(6)};
+//        Duration[] discs = {Duration.ofMinutes(2)};
+//        Integer[] param_cases = {4};
+//        Double[] divertFactors = {1.0};
+//        String[] airports = {"ATL", "ORD", "DFW", "LGA", "SFO", "DCA"};
+        String[] airports = {"DFW"};
+        Duration[] maxLengths = {Duration.ofHours(2), Duration.ofHours(3), Duration.ofHours(4), Duration.ofHours(5), Duration.ofHours(6)};
+        Duration[] discs = {Duration.ofMinutes(2), Duration.ofMinutes(5), Duration.ofMinutes(10), Duration.ofMinutes(15)};
+        Integer[] param_cases = {1, 2, 3, 4, 5, 6};
 
-        //Double[] divertFactors = {1.0, 2.0, 1000.0};
+        Double[] divertFactors = {1.0, 2.0, 1000.0};
         Duration padding = Duration.ofHours(3);
         LocalDateTime[] localStartTimes = {LocalDateTime.of(2017, 7, 15, 7, 0),
                 LocalDateTime.of(2017, 7, 15, 17, 0)};
