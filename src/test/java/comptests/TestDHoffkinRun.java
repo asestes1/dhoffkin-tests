@@ -68,7 +68,7 @@ public class TestDHoffkinRun {
 
     @Test
     public void compTestsDHoffkin() throws IOException, GRBException, IllegalArgumentException {
-        boolean append = true;
+        boolean append = false;
         boolean verbose = false;
 
 //        String[] airports = {"ORD"};
@@ -77,7 +77,7 @@ public class TestDHoffkinRun {
 //        Integer[] param_cases = {4};
 //        Double[] divertFactors = {1.0};
 //        String[] airports = {"ATL", "ORD", "DFW", "LGA", "SFO", "DCA"};
-        String[] airports = {"DFW"};
+        String[] airports = {"ATL", "DFW", "ORD", "LGA", "SFO", "DCA"};
         Duration[] maxLengths = {Duration.ofHours(2), Duration.ofHours(3), Duration.ofHours(4), Duration.ofHours(5), Duration.ofHours(6)};
         Duration[] discs = {Duration.ofMinutes(2), Duration.ofMinutes(5), Duration.ofMinutes(10), Duration.ofMinutes(15)};
         Integer[] param_cases = {1, 2, 3, 4, 5, 6};
@@ -98,8 +98,8 @@ public class TestDHoffkinRun {
             writer.write(
                     "APT,VFR,IFR,WMAX,START,END,MAXLENGTH,NUM_SITTING,NUM_AIR,DISC,CASE,AIRCOST," +
                             "LOOKAHEAD,NUM_TIME_PERIODS,EARLY_CHANGE,LATE_CHANGE,PROB_ALT,DIVERT_FACTOR," +
-                            " MH_SOLVETIME,MHD_SOLVETIME,DHD_SOLVETIME,MH_FEASIBLE,OBJ_MH,"+
-                            "OBJ_DIVERT,MH_NODES, MHD_NODES, DHD_NODES,MHD_DIVERT,DHD_DIVERT\n");
+                            "MH_SOLVETIME,MHD_SOLVETIME,DHD_SOLVETIME,MH_FEASIBLE,OBJ_MH,"+
+                            "OBJ_DIVERT,MH_NODES,MHD_NODES,DHD_NODES,MHD_DIVERT,DHD_DIVERT,\n");
         }
 
 
@@ -232,13 +232,12 @@ public class TestDHoffkinRun {
                                         + solveTimeMHD + "," + solveTimeDH + "," + feasible + ","
                                         + objectiveMH + "," + objectiveDH + "," + mhNodes+","+mhdNodes + "," + dhNodes +
                                         "," + mhdDivert + "," + dhDivert + "," + "\n");
-
-                                // Reset parameters
-                                wmax = vfr - ifr;
-                                airCost = 3.0;
-                                lookahead = 0;
-                                probAlt = false;
                             }
+                            // Reset parameters
+                            wmax = vfr - ifr;
+                            airCost = 3.0;
+                            lookahead = 0;
+                            probAlt = false;
                         }
                     }
                 }
