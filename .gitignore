@@ -1,4 +1,5 @@
 *.DS_Store
+bin/
 
 # Compiled class file
 *.class
@@ -29,3 +30,8 @@ hs_err_pid*
 .idea/vcs.xml
 .idea/workspace.xml
 dhoffkin-tests.iml
+/target/
+bin/.settings/org.eclipse.jdt.core.prefs
+.settings/org.eclipse.jdt.core.prefs
+.classpath
+.project

@@ -1,16 +1,5 @@
 package comptests;
 
-import gurobi.GRB;
-import gurobi.GRBEnv;
-import gurobi.GRBException;
-import gurobi.GRBModel;
-import ips.DHoffkinFlightParser;
-import ips.DHoffkinInput;
-import ips.ExtendedHofkinModel;
-import ips.MHDynModel;
-import ips.MHFlightParser;
-import ips.MHInput;
-
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -24,6 +13,17 @@ import java.util.HashSet;
 
 import org.junit.Test;
 
+import gurobi.GRB;
+import gurobi.GRBEnv;
+import gurobi.GRBException;
+import gurobi.GRBModel;
+import ips.DHoffkinFlightParser;
+import ips.DHoffkinInput;
+import ips.ExtendedHofkinModel;
+import ips.LRHoffkin;
+import ips.MHDynModel;
+import ips.MHFlightParser;
+import ips.MHInput;
 import scenarios.DiscreteScenarioTree;
 import scenarios.ScenarioTreeFactory;
 import util.BTSParser;
@@ -32,6 +32,34 @@ import util.TimeZoneGetter;
 
 public class TestDHoffkinRun {
 
+    @Test
+    public void testRunLRHoffkin() throws IOException, GRBException {
+        Duration disc = Duration.ofMinutes(15);
+        System.out.println("Reading flights");
+        File btsFile = new File(TestDHoffkinRun.class.getClassLoader().getResource("OnTime_2017_07_15.csv")
+                .getFile());
+        Duration padding = Duration.ofHours(3);
+        OffsetDateTime startTime = LocalDateTime.of(2017, 7, 15, 7, 0).atOffset(ZoneOffset.UTC);
+        OffsetDateTime endTime = LocalDateTime.of(2017, 7, 15, 17, 0).atOffset(ZoneOffset.UTC);
+        BTSParser.ResultStruct btsResults = BTSParser.separateForGDPPlanning(
+                BTSParser.filterByAirportAndTimeRange(btsFile, startTime, endTime, "EWR"), startTime, endTime.plus(padding));
+
+        int maxAir = 1000;
+
+        System.out.println("Parsing flights to DH demands");
+        DHoffkinFlightParser.DemandStruct demand = DHoffkinFlightParser.wrapBTSOutput(btsResults, disc);
+        System.out.println(demand);
+
+        System.out.println("Making scenario tree");
+        DiscreteScenarioTree tree = ScenarioTreeFactory.makeLoToHigh(demand.getNumTimePeriods(), 0, 48, 3, 33, 12,
+                false, 0);
+
+        DHoffkinInput myInput = new DHoffkinInput(maxAir, 1.0, 2.0, 24, demand, tree);
+
+        System.out.println("Building and Solving DH Model");
+        LRHoffkin.solveModel(myInput, new GRBEnv(), true);
+    }
+    
     @Test
     public void testRunDHoffkin() throws IOException, GRBException {
         Duration disc = Duration.ofMinutes(5);
