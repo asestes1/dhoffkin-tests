@@ -2,7 +2,7 @@ package ips;
 
 import scenarios.DiscreteScenarioTree;
 
-public class DHoffkinInput implements ExtendedHofkinModel.Input, LRHoffkin.Input {
+public class DHoffkinInput implements ExtendedHofkinModel.Input, LRHoffkin.Input, LRHoffkin2.Input {
 	private final int numTimePeriods;
 	private final int maxAirborne;
 	private final double groundCost;

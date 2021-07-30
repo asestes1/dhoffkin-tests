@@ -21,6 +21,7 @@ import ips.DHoffkinFlightParser;
 import ips.DHoffkinInput;
 import ips.ExtendedHofkinModel;
 import ips.LRHoffkin;
+import ips.LRHoffkin2;
 import ips.MHDynModel;
 import ips.MHFlightParser;
 import ips.MHInput;
@@ -38,26 +39,34 @@ public class TestDHoffkinRun {
         System.out.println("Reading flights");
         File btsFile = new File(TestDHoffkinRun.class.getClassLoader().getResource("OnTime_2017_07_15.csv")
                 .getFile());
-        Duration padding = Duration.ofHours(3);
-        OffsetDateTime startTime = LocalDateTime.of(2017, 7, 15, 7, 0).atOffset(ZoneOffset.UTC);
-        OffsetDateTime endTime = LocalDateTime.of(2017, 7, 15, 17, 0).atOffset(ZoneOffset.UTC);
-        BTSParser.ResultStruct btsResults = BTSParser.separateForGDPPlanning(
-                BTSParser.filterByAirportAndTimeRange(btsFile, startTime, endTime, "EWR"), startTime, endTime.plus(padding));
-
+        String airport = "SFO";
+        int numhours = 6;
+        ZoneId airportZoneId = TimeZoneGetter.getTimeZone(airport);
+        OffsetDateTime earliestStart = LocalDateTime.of(2017, 7, 15, 7, 0).atZone(airportZoneId).toOffsetDateTime();
+        OffsetDateTime latestEnd = LocalDateTime.of(2017, 7, 15, 17, 0).plus(Duration.ofHours(6)).plus(Duration.ofHours(3)).atZone(airportZoneId).toOffsetDateTime();
+        
+        OffsetDateTime startTime = LocalDateTime.of(2017, 7, 15, 7, 0).atZone(airportZoneId).toOffsetDateTime();
+        OffsetDateTime end = startTime.plus(Duration.ofHours(numhours)).plus(Duration.ofHours(3));
+        HashSet<BTSParser.FlightStruct> relevantFlights = BTSParser.filterByAirportAndTimeRange(btsFile,
+                earliestStart, latestEnd, airport);
+       
+        BTSParser.ResultStruct separatedFlights = BTSParser.separateForGDPPlanning(relevantFlights, startTime, end);
         int maxAir = 1000;
 
         System.out.println("Parsing flights to DH demands");
-        DHoffkinFlightParser.DemandStruct demand = DHoffkinFlightParser.wrapBTSOutput(btsResults, disc);
+        DHoffkinFlightParser.DemandStruct demand = DHoffkinFlightParser.wrapBTSOutput(separatedFlights, disc);
         System.out.println(demand);
 
         System.out.println("Making scenario tree");
-        DiscreteScenarioTree tree = ScenarioTreeFactory.makeLoToHigh(demand.getNumTimePeriods(), 0, 48, 3, 33, 12,
+        DiscreteScenarioTree tree = ScenarioTreeFactory.makeLoToHigh(demand.getNumTimePeriods(), 0, 4*numhours, 29, 55, 4,
                 false, 0);
 
-        DHoffkinInput myInput = new DHoffkinInput(maxAir, 1.0, 2.0, 24, demand, tree);
+        DHoffkinInput myInput = new DHoffkinInput(maxAir, 1.0, 2.0, 1000.0, demand, tree);
 
         System.out.println("Building and Solving DH Model");
-        LRHoffkin.solveModel(myInput, new GRBEnv(), true);
+        LRHoffkin2.solveModel(myInput, new GRBEnv(), true, -1.0);
+        
+//        ExtendedHofkinModel.solveModel(myInput, new GRBEnv(), true);
     }
     
     @Test
@@ -95,6 +104,138 @@ public class TestDHoffkinRun {
     }
 
     @Test
+    public void compTestsLR() throws IOException, GRBException, IllegalArgumentException {
+        boolean append = false;
+        boolean verbose = true;
+
+//        String[] airports = {"ORD"};
+//        Duration[] maxLengths = {Duration.ofHours(6)};
+//        Duration[] discs = {Duration.ofMinutes(2)};
+//        Integer[] param_cases = {4};
+//        Double[] divertFactors = {1.0};
+//        String[] airports = {"ATL", "ORD", "DFW", "LGA", "SFO", "DCA"};
+        String filename = "lr_results.csv";
+        String[] airports = {"ATL", "DFW", "ORD", "LGA", "SFO", "DCA"};
+        Duration[] maxLengths = {Duration.ofHours(2), Duration.ofHours(3), Duration.ofHours(4), Duration.ofHours(5), Duration.ofHours(6)};
+        Duration[] discs = {Duration.ofMinutes(15)};
+        Integer[] param_cases = {1,2,3,4,5,6};
+        Double[] divertFactors = {1000.0};
+        Duration padding = Duration.ofHours(3);
+        LocalDateTime[] localStartTimes = {LocalDateTime.of(2017, 7, 15, 7, 0),
+                LocalDateTime.of(2017, 7, 15, 17, 0)};
+
+        double groundCost = 1.0;
+        double airCost = 3.0;
+        int lookahead = 0;
+        boolean probAlt = false;
+
+
+        if (!append) {
+            FileWriter fw = new FileWriter(filename, append);
+            BufferedWriter writer = new BufferedWriter(fw);
+            writer.write(
+                    "APT,VFR,IFR,WMAX,START,END,MAXLENGTH,NUM_SITTING,NUM_AIR,DISC,CASE,AIRCOST," +
+                            "LOOKAHEAD,NUM_TIME_PERIODS,EARLY_CHANGE,LATE_CHANGE,PROB_ALT,DIVERT_FACTOR," +
+                            "SOLVETIME,OBJECTIVE\n");
+            writer.close();
+        }
+
+
+        File btsFile = new File(TestDHoffkinRun.class.getClassLoader().getResource("OnTime_2017_07_15.csv")
+                .getFile());
+        GRBEnv myEnv = new GRBEnv();
+
+        int counter = 0;
+        for (String airport : airports) {
+            ZoneId airportZoneId = TimeZoneGetter.getTimeZone(airport);
+            OffsetDateTime earliestStart = localStartTimes[0].atZone(airportZoneId).toOffsetDateTime();
+            OffsetDateTime latestEnd = localStartTimes[localStartTimes.length - 1]
+                    .plus(maxLengths[maxLengths.length - 1]).plus(padding).atZone(airportZoneId).toOffsetDateTime();
+            HashSet<BTSParser.FlightStruct> relevantFlights = BTSParser.filterByAirportAndTimeRange(btsFile,
+                    earliestStart, latestEnd, airport);
+
+            int vfr = CapacityGetter.getVfr(airport);
+            int ifr = CapacityGetter.getIfr(airport);
+            int wmax = vfr - ifr;
+
+            for (LocalDateTime startTime : localStartTimes) {
+                OffsetDateTime start = startTime.atZone(airportZoneId).toOffsetDateTime();
+                for (Duration maxLength : maxLengths) {
+                    System.out.println(airport + "," + startTime + "," + maxLength);
+                    OffsetDateTime end = start.plus(maxLength).plus(padding);
+                    BTSParser.ResultStruct separatedFlights = BTSParser.separateForGDPPlanning(relevantFlights, start,
+                            end);
+
+                    int numSitting = separatedFlights.getSittingFlights().size();
+                    int numAir = separatedFlights.getAirborneFlights().size();
+                    for (Duration disc : discs) {
+                        int numTimePeriodsInHour = (int) (Duration.ofHours(1).toNanos() / disc.toNanos());
+                        int numTimePeriods = (int) (Duration.between(start, end).toNanos() / disc.toNanos());
+                        int earliestChange = 2 * numTimePeriodsInHour;
+                        int latestChange = (int) (Duration.between(start, start.plus(maxLength)).toNanos()
+                                / disc.toNanos());
+
+                        DHoffkinFlightParser.DemandStruct myDHDemands = DHoffkinFlightParser
+                                .wrapBTSOutput(separatedFlights, disc);
+
+                        for (int param_case : param_cases) {
+                            if (param_case == 2) {
+                                wmax = ExtendedHofkinModel.UNLIMITED;
+                            } else if (param_case == 3) {
+                                airCost = 2.0;
+                            } else if (param_case == 4) {
+                                probAlt = true;
+                            } else if (param_case == 5) {
+                                wmax = 0;
+                            } else if (param_case == 6) {
+                                lookahead = numTimePeriodsInHour / 2;
+                            }
+                            for (double divertFactor : divertFactors) {
+                                System.out.println(counter++);
+                                double divertCost = divertFactor * numTimePeriodsInHour * airCost;
+
+                                // Run experiment
+
+                                DiscreteScenarioTree myTree = ScenarioTreeFactory.makeLoToHigh(numTimePeriods,
+                                        earliestChange, latestChange, ifr, vfr, numTimePeriodsInHour, probAlt, lookahead);
+
+                                
+                                DHoffkinInput myDHInput = new DHoffkinInput(wmax, groundCost, airCost, divertCost, myDHDemands, myTree);
+                                long startTiming = System.nanoTime();
+                                GRBModel dhModel = LRHoffkin.solveModel(myDHInput, myEnv, verbose, 1800);
+                                long endTiming = System.nanoTime();
+                                double totalTime = (endTiming-startTiming)/1000000000.0;
+                                double objectiveDH = Double.NaN;
+                                if (dhModel.get(GRB.IntAttr.Status) == GRB.Status.OPTIMAL) {
+                                    objectiveDH = dhModel.get(GRB.DoubleAttr.ObjVal);
+                                }
+                                dhModel.dispose();
+
+                             
+                                FileWriter fw = new FileWriter(filename, true);
+                                BufferedWriter writer = new BufferedWriter(fw);
+                                writer.write(airport + "," + vfr + "," + ifr + "," + wmax + "," + start + "," + end + ","
+                                        + maxLength.toHours() + "," + numSitting + "," + numAir + "," + disc.toMinutes()
+                                        + "," + param_case + "," + airCost + "," + lookahead + "," + numTimePeriods + ","
+                                        + earliestChange + "," + latestChange + "," + probAlt + "," + divertFactor + ","
+                                        + (totalTime)+ ","+objectiveDH+"\n");
+                                writer.close();
+                            }
+                            // Reset parameters
+                            wmax = vfr - ifr;
+                            airCost = 3.0;
+                            lookahead = 0;
+                            probAlt = false;
+                        }
+                    }
+                }
+            }
+        }
+        
+        return;
+    }
+    
+    @Test
     public void compTestsDHoffkin() throws IOException, GRBException, IllegalArgumentException {
         boolean append = false;
         boolean verbose = false;
@@ -120,7 +261,7 @@ public class TestDHoffkinRun {
         int lookahead = 0;
         boolean probAlt = false;
 
-        FileWriter fw = new FileWriter("new_results.csv", append);
+        FileWriter fw = new FileWriter("lr_results.csv", append);
         BufferedWriter writer = new BufferedWriter(fw);
         if (!append) {
             writer.write(

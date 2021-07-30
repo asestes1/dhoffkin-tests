@@ -55,13 +55,16 @@ public final class LRHoffkin {
 	}
 
 	public static GRBModel solveModel(Input myInput) throws GRBException {
-		return solveModel(myInput, new GRBEnv(), false);
+		return solveModel(myInput, new GRBEnv(), false, -1);
 	}
 
-	public static GRBModel solveModel(Input myInput, GRBEnv env, boolean verbose) throws GRBException {
+	public static GRBModel solveModel(Input myInput, GRBEnv env, boolean verbose, double maxtime) throws GRBException {
 		GRBModel myModel = setupModel(myInput, env, verbose);
 		if (!verbose) {
 			myModel.set(GRB.IntParam.OutputFlag, 0);
+		}
+		if(maxtime > 0) {
+			myModel.set(GRB.DoubleParam.TimeLimit, maxtime);
 		}
 		myModel.optimize();
 		return myModel;
