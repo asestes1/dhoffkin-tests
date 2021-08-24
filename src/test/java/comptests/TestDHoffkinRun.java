@@ -114,10 +114,10 @@ public class TestDHoffkinRun {
 //        Integer[] param_cases = {4};
 //        Double[] divertFactors = {1.0};
 //        String[] airports = {"ATL", "ORD", "DFW", "LGA", "SFO", "DCA"};
-        String filename = "lr_results.csv";
+        String filename = "lr2_results_5min.csv";
         String[] airports = {"ATL", "DFW", "ORD", "LGA", "SFO", "DCA"};
         Duration[] maxLengths = {Duration.ofHours(2), Duration.ofHours(3), Duration.ofHours(4), Duration.ofHours(5), Duration.ofHours(6)};
-        Duration[] discs = {Duration.ofMinutes(15)};
+        Duration[] discs = {Duration.ofMinutes(5)};
         Integer[] param_cases = {1,2,3,4,5,6};
         Double[] divertFactors = {1000.0};
         Duration padding = Duration.ofHours(3);
@@ -202,7 +202,7 @@ public class TestDHoffkinRun {
                                 
                                 DHoffkinInput myDHInput = new DHoffkinInput(wmax, groundCost, airCost, divertCost, myDHDemands, myTree);
                                 long startTiming = System.nanoTime();
-                                GRBModel dhModel = LRHoffkin.solveModel(myDHInput, myEnv, verbose, 1800);
+                                GRBModel dhModel = LRHoffkin2.solveModel(myDHInput, myEnv, verbose, 1800);
                                 long endTiming = System.nanoTime();
                                 double totalTime = (endTiming-startTiming)/1000000000.0;
                                 double objectiveDH = Double.NaN;
